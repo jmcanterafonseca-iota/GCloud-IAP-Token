@@ -1,0 +1,16 @@
+{
+  "name": "zebra-auth",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Authenticate Zebra for getting access to the Zebra - Savanna integration service",
+  "main": "get_token.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jsonwebtoken": "^8.5.1",
+    "node-fetch": "^2.6.1"
+  }
+}
