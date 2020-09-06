@@ -89,10 +89,15 @@ class IdTokenFetch {
         const jwtToken = this._selfSignJwt();
 
         this._postAuthServer(jwtToken).then(async (response) => {
-          let data;
           try {
-            if (response.status === 200) {
-              data = await response.text();
+            if (response.ok && response.headers.get("content-type").indexOf("application/json") !== -1) {
+              const jsonData = await response.json();
+
+              if (!jsonData.id_token) {
+                throw Error(`Token retrieval error: No id_token found in JSON response`);
+              }
+
+              this._id_token = jsonData.id_token;
             }
             else {
               throw Error(`Token retrieval error: ${response.status} ${await response.text()}`);
@@ -105,7 +110,6 @@ class IdTokenFetch {
             return;
           }
 
-          this._id_token = JSON.parse(data).id_token;
           resolve(this._id_token);
 
           this._tokenRequested = false;
