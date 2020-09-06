@@ -20,6 +20,8 @@ describe("getToken", () => {
 
     // All id_tokens obtained should be identical
     const id_token = id_tokens[0];
+    expect(id_token.length > 0).toBe(true);
+  
     const expected = [];
     for (let j = 0; j < total; j++) {
       expected.push(id_token);
