@@ -2,39 +2,66 @@ import jwt from "jsonwebtoken";
 import { EventEmitter } from "events";
 import fetch from "node-fetch";
 
-class TokenRetriever {
+/**
+ *  Provides the behaviour for obtaining a new Id Token to invoke an API
+ *  protected by the Google's IAP
+ * 
+ */
+class IdTokenFetch {
+  /**
+   * Constructor function
+   * 
+   * @param keys The keys used to sign JWT 
+   * @param client_id The client id
+   */
   constructor(keys, client_id) {
-    // The keys for self-signing
-    this.keys = keys;
-    // The client_id concerned
-    this.client_id = client_id;
-
     // The token returned
-    this.id_token = null;
+    this._id_token = null;
 
     // Whether we are in the middle of an id_token Request
-    this.tokenRequested = false;
+    this._tokenRequested = false;
     // Event emitter for dealing with concurrency of token requests
-    this.emitter = new EventEmitter();
+    this._emitter = new EventEmitter();
+
+    // The keys for self-signing
+    this._keys = keys;
+    // The client_id concerned
+    this._client_id = client_id;
   }
 
+  /**
+   * Sets the keys to be used
+   * 
+   * @param keys 
+   */
   setKeys(keys) {
-    this.keys = keys;
+    this._keys = keys;
   }
 
-  set_client_id(client_id) {
-    this.client_id = client_id;
+  /**
+   * Sets the concerned client id
+   * 
+   * @param client_id 
+   */
+  setClientId(client_id) {
+    this._client_id = client_id;
   }
 
-  get_id_token() {
-    if (this.id_token) {
-      return Promise.resolve(this.id_token);
+  /**
+   *  Allows to obtain the id_token
+   * 
+   * @returns Promise
+   * 
+   */
+  getToken() {
+    if (this._id_token) {
+      return Promise.resolve(this._id_token);
     }
 
-    return this.getNewToken();
+    return this._getNewToken();
   }
 
-  postAuthServer(jtwSelfSigned) {
+  _postAuthServer(jtwSelfSigned) {
     const reqHeaders = new fetch.Headers();
     reqHeaders.append("Content-Type", "application/x-www-form-urlencoded");
 
@@ -50,18 +77,18 @@ class TokenRetriever {
       redirect: 'follow'
     };
 
-    return fetch(this.keys.token_uri, requestOptions);
+    return fetch(this._keys.token_uri, requestOptions);
   }
 
-  getNewToken() {
+  _getNewToken() {
     return new Promise((resolve, reject) => {
-      if (!this.tokenRequested) {
-        this.id_token = null;
-        this.tokenRequested = true;
+      if (!this._tokenRequested) {
+        this._id_token = null;
+        this._tokenRequested = true;
 
-        const jwtToken = this.selfSignJwt();
+        const jwtToken = this._selfSignJwt();
 
-        this.postAuthServer(jwtToken).then(async (response) => {
+        this._postAuthServer(jwtToken).then(async (response) => {
           let data;
           try {
             if (response.status === 200) {
@@ -72,78 +99,74 @@ class TokenRetriever {
             }
           }
           catch (error) {
-            this.tokenRequested = false;
+            this._tokenRequested = false;
             reject(error);
-            this.emitter.emit("error", error);
+            this._emitter.emit("error", error);
             return;
           }
 
-          this.id_token = JSON.parse(data).id_token;
-          resolve(this.id_token);
+          this._id_token = JSON.parse(data).id_token;
+          resolve(this._id_token);
 
-          this.tokenRequested = false;
+          this._tokenRequested = false;
 
           // Notify all possible listeners waiting
-          this.emitter.emit("token");
+          this._emitter.emit("token");
         }, error => {
-          this.tokenRequested = false;
+          this._tokenRequested = false;
           reject(error);
-          this.emitter.emit("error", error);
+          this._emitter.emit("error", error);
         });
 
       }
       else {
         const tokenFunction = () => {
-          this.emitter.off("error", errorFunction);
-          resolve(this.id_token);
+          this._emitter.off("error", errorFunction);
+          resolve(this._id_token);
         };
 
         const errorFunction = (error) => {
-          this.emitter.off("token", tokenFunction);
+          this._emitter.off("token", tokenFunction);
           reject(error);
         }
 
         // Wait for the pending request
-        this.emitter.once("token", tokenFunction);
-        this.emitter.once("error", errorFunction);
+        this._emitter.once("token", tokenFunction);
+        this._emitter.once("error", errorFunction);
       }
     });
   }
 
-  selfSignJwt() {
+  _selfSignJwt() {
     const payload = {
-      "iss": this.keys.client_email,
-      "sub": this.keys.client_email,
-      "aud": this.keys.token_uri,
-      "target_audience": this.client_id,
+      "iss": this._keys.client_email,
+      "sub": this._keys.client_email,
+      "aud": this._keys.token_uri,
+      "target_audience": this._client_id,
       "exp": new Date() / 1000 + 120
     };
 
-    const token = jwt.sign(payload, this.keys.private_key, {
+    const token = jwt.sign(payload, this._keys.private_key, {
       algorithm: "RS256",
     });
 
     return token;
   }
 
-  refresh_id_token() {
-    this.id_token = null;
+  /**
+   *  Refreshes the id_token obtaining a new one
+   * 
+   *  @returns Promise
+   * 
+   */
+  refreshToken() {
+    this._id_token = null;
 
-    return this.getNewToken();
+    return this._getNewToken();
   }
 }
 
-export const tokenRetriever = new TokenRetriever();
+// Pre-instantiated by default object
+const idTokenRetriever = new IdTokenFetch();
 
-/*
- const keys = await import("./iota-test-keys.json");
- const tr = new TokenRetriever(keys);
- const token = await tr.get();
-
- const result = await http.get();
-
- if (result.status === 401) {
-   const token = tr.refresh();
-   tr.refresh();
- }
-*/
+export { idTokenRetriever, IdTokenFetch };
