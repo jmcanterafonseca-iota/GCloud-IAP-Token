@@ -3,11 +3,11 @@ import { EventEmitter } from "events";
 import fetch from "node-fetch";
 
 /**
- *  Provides the behaviour for obtaining a new Id Token to invoke an API
+ *  Provides the behaviour for obtaining a new id_token to invoke an API
  *  protected by the Google's IAP
  * 
  */
-class IdTokenFetch {
+class IdTokenFetcher {
   /**
    * Constructor function
    * 
@@ -171,6 +171,6 @@ class IdTokenFetch {
 }
 
 // Pre-instantiated by default object
-const idTokenRetriever = new IdTokenFetch();
+const defaultFetcher = new IdTokenFetcher();
 
-export { idTokenRetriever, IdTokenFetch };
+export { defaultFetcher, IdTokenFetcher };
