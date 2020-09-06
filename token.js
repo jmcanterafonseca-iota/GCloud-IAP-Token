@@ -1,6 +1,6 @@
-import jwt from "jsonwebtoken";
-import { EventEmitter } from "events";
-import fetch from "node-fetch";
+const jwt = require("jsonwebtoken");
+const { EventEmitter } = require("events");
+const fetch = require("node-fetch");
 
 /**
  *  Provides the behaviour for obtaining a new id_token to invoke an API
@@ -173,4 +173,8 @@ class IdTokenFetcher {
 // Pre-instantiated by default object
 const defaultFetcher = new IdTokenFetcher();
 
-export { defaultFetcher, IdTokenFetcher };
+module.exports = {
+  defaultFetcher, 
+  IdTokenFetcher
+};
+

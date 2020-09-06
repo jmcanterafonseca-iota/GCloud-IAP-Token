@@ -5,12 +5,19 @@
   "description": "Authenticate Zebra for getting access to the Zebra - Savanna integration service",
   "main": "get_token.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx jest -w 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "jsonwebtoken": "^8.5.1",
     "node-fetch": "^2.6.1"
+  },
+  "devDependencies": {
+    "jest": "^26.4.2"
+  },
+  "jest": {
+    "rootDir": ".",
+    "testMatch": ["**/*_test.js"]
   }
 }
