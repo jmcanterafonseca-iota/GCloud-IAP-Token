@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { EventEmitter } = require("events");
 const fetch = require("node-fetch");
+const { Headers } = require("node-fetch");
 
 /**
  *  Provides the behaviour for obtaining a new id_token to invoke an API
@@ -62,7 +63,7 @@ class IdTokenFetcher {
   }
 
   _postAuthServer(jtwSelfSigned) {
-    const reqHeaders = new fetch.Headers();
+    const reqHeaders = new Headers();
     reqHeaders.append("Content-Type", "application/x-www-form-urlencoded");
 
     const urlencoded = new URLSearchParams();
@@ -141,7 +142,7 @@ class IdTokenFetcher {
     });
   }
 
-  _selfSignJwt() {
+  _selfSignJwt(exp) {
     const payload = {
       "iss": this._keys.client_email,
       "sub": this._keys.client_email,
@@ -174,7 +175,7 @@ class IdTokenFetcher {
 const defaultFetcher = new IdTokenFetcher();
 
 module.exports = {
-  defaultFetcher, 
+  defaultFetcher,
   IdTokenFetcher
 };
 
