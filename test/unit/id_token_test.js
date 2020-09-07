@@ -1,12 +1,36 @@
-const { defaultFetcher } = require("../id_token.js");
-const fs = require("fs");
-
-const CLIENT_ID = "218789274679-o3mm4cn117g7fgg2ftp3uui1i813pid2.apps.googleusercontent.com";
-const keys = JSON.parse(fs.readFileSync("./credentials/iota-test.json", "utf8"));
+const { defaultFetcher } = require("../../id_token.js");
 
 describe("Token Tests", () => {
-  defaultFetcher.setKeys(keys);
-  defaultFetcher.setClientId(CLIENT_ID);
+  defaultFetcher.setKeys({});
+  defaultFetcher.setClientId("dummy");
+
+  // Mock JWT generation
+  defaultFetcher._selfSignJwt = jest.fn().mockReturnValue("abcedef");
+
+  // Some boilerplate for mocking POST token generation
+  let sequence = 1;
+  const tokenGenerator = function() {
+    return Promise.resolve(new Response(sequence++));
+  }
+  const Response = class {
+    constructor(sequence) {
+      this.sequence = sequence;
+
+      this.ok = true;
+
+      this.headers = {
+        get (header) {
+          return "application/json";
+        }
+      }
+    }
+    json() {
+      return Promise.resolve({ "id_token": String(this.sequence)});
+    }
+  };
+
+  // Mock the POST to the server
+  defaultFetcher._postAuthServer = jest.fn(tokenGenerator);
 
   test("Asking several times in parallel produces same id_token", async () => {
     const total = 4;
@@ -33,15 +57,7 @@ describe("Token Tests", () => {
   test("Refresh token produces a different id_token", async () => {
     const id_token1 = await defaultFetcher.getToken();
 
-    // Wait some seconds to guarantee that the token will be actually refreshed
-    const p = new Promise((resolve, reject) => {
-      setTimeout(async () => {
-        const t2 = await defaultFetcher.refreshToken();
-        resolve(t2);
-      }, 3000);
-    });
-
-    const id_token2 = await p;
+    const id_token2 = await defaultFetcher.refreshToken();
     const id_token3 = await defaultFetcher.getToken();
 
     expect(id_token1 !== id_token2).toBe(true);
@@ -51,17 +67,10 @@ describe("Token Tests", () => {
   test("Refresh token at the same time leads to same new id_token", async () => {
     const id_token1 = await defaultFetcher.getToken();
 
-    // Wait some seconds to guarantee that the token will be actually refreshed
-    const p = new Promise((resolve, reject) => {
-      setTimeout(async () => {
-        const tokens = await Promise.all([defaultFetcher.refreshToken(), defaultFetcher.refreshToken()]);
-        resolve(tokens);
-      }, 3000);
-    });
-
-    const id_tokens = await p;
-
+    const id_tokens = await Promise.all([defaultFetcher.refreshToken(), defaultFetcher.refreshToken()]);
+  
     expect(id_tokens[0] === id_tokens[1]).toBe(true);
     expect(id_tokens[0] !== id_token1).toBe(true);
   });
+
 });
